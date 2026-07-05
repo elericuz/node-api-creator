@@ -1,9 +1,15 @@
 {
   "name": "it-node-api-creator",
-  "version": "2.5.0",
+  "version": "2.5.1",
   "author": "Eric Valera <eric@iteraciona.com>",
   "description": "A tool that allows you to quickly start a backend project with Node.js and Express",
   "main": "server.js",
+  "files": [
+    "bin/",
+    "template/",
+    "README.md",
+    "LICENSE"
+  ],
   "scripts": {
     "start": "nodemon server.js",
     "test": "echo \"Error: no test specified\" && exit 1"

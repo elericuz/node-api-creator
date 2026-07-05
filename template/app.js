@@ -2,6 +2,7 @@ import morgan from 'morgan';
 import express from 'express';
 import expressLayouts from 'express-ejs-layouts'
 import cors from 'cors';
+import helmet from 'helmet';
 import requestIp from "request-ip";
 import * as path from "path";
 import {customMiddleware} from "./src/middlewares/custom.js";
@@ -20,6 +21,8 @@ export const rootDir = path.resolve(__dirname);
 
 // App
 const app = express();
+app.disable('x-powered-by');
+app.use(helmet());
 
 // ejs as view engine
 app.use(expressLayouts);
@@ -40,28 +43,25 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 // IP's client
 app.use(requestIp.mw());
 
-//CORS
+// CORS — allowlist from CORS_ORIGINS (comma-separated).
+// Empty: allow all in DEVELOPMENT, block cross-origin in PRODUCTION.
+const allowedOrigins = (process.env.CORS_ORIGINS || '')
+    .split(',')
+    .map((o) => o.trim())
+    .filter(Boolean);
+
 app.use(cors({
-    origin: '*',
-    methods: ['GET', 'POST', 'PUT', 'DELETE'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'token'],
+    origin: allowedOrigins.length
+        ? allowedOrigins
+        : (process.env.ENVIRONMENT === 'DEVELOPMENT'),
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
     credentials: true
 }));
 
-app.use((req, res, next) => {
-    res.header('Access-Control-Allow-Origin', '*'); // Permitir todos los orígenes
-    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-
-    if (req.method === 'OPTIONS') {
-        return res.sendStatus(200);
-    }
-
-    next();
-});
-
-// user info
-app.use(userInfo)
+// Auth context (verifies JWT if present; does NOT block) then user info
+app.use(customMiddleware);
+app.use(userInfo);
 
 // Other middlewares and routes
 app.use(express.json());
@@ -76,9 +76,6 @@ const limiter = rateLimit({
     legacyHeaders: false,
 });
 app.use(limiter);
-
-// Custom middleware
-app.use(customMiddleware);
 
 setupMongooseLogger();
 app.use(requestLogger);

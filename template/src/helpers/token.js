@@ -21,8 +21,12 @@ export const createToken = (user) => {
     );
 };
 
-export const decodeToken = (token) => {
-    return jwt.decode(token);
+export const verifyToken = (token) => {
+    try {
+        return jwt.verify(token, process.env.JWT_KEY, { algorithms: ['HS256'] });
+    } catch {
+        return null;
+    }
 };
 
 export const obscureToken = (token) => {

@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.3.0] - 2026-07-05
+
+### Added
+- Pluggable database layer selected via `DB_ENGINE` (`mongo` | `postgres` | `mysql`), built on the repository (ports & adapters) pattern.
+- `db/` connection factory (`connect()` / `getClient()` / `disconnect()`) with per-engine connectors: `mongo.js` (Mongoose), `postgres.js` & `mysql.js` (Knex).
+- `user` reference module demonstrating the pattern end-to-end: domain contract + Mongo and SQL adapters + factory + a DB-agnostic service, mounted at `/v1/users`.
+- SQL support through Knex with the `pg` and `mysql2` drivers (loaded lazily, so MongoDB-only projects pay no runtime cost).
+- `SQL_*` environment variables: `SQL_HOST`, `SQL_PORT`, `SQL_USER`, `SQL_PASSWORD`, `SQL_DATABASE`, `SQL_SSL`.
+
+### Changed
+- `server.js` now gates startup on `DB_ENGINE` and its required params (defaults to `mongo`, so existing MongoDB projects are unaffected). `SIGINT` shutdown closes the connection via the engine-aware `disconnect()`.
+- Business logic moved behind a repository contract — services no longer import `mongoose` (or `knex`) directly.
+
+### Removed
+- `db.js` — replaced by the `db/` factory (the Mongoose connection logic is preserved in `db/engines/mongo.js`).
+
+---
+
 ## [1.2.0] - 2026-03-04
 
 ### Added

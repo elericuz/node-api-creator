@@ -12,12 +12,12 @@ export const notFoundHandler = (req, res, next) => {
 export const errorHandler = (err, req, res, next) => {
     errorLogger(err, req, res, next);
 
+    const isDev = process.env.ENVIRONMENT === 'DEVELOPMENT';
+
     res.status(err.status || 500).json({
         message: 'Something went wrong',
-        error: {
-            message: err.message,
-            path: err.path || req.originalUrl
-        },
+        // Only expose internals in development — avoid leaking to clients.
+        error: isDev ? { message: err.message, path: err.path || req.originalUrl } : undefined,
         success: false
     });
 };

@@ -1,6 +1,6 @@
 {
   "name": "it-node-api-creator",
-  "version": "2.4.0",
+  "version": "2.5.0",
   "author": "Eric Valera <eric@iteraciona.com>",
   "description": "A tool that allows you to quickly start a backend project with Node.js and Express",
   "main": "server.js",

@@ -1,22 +1,11 @@
-import {decodeToken} from "../helpers/token.js";
-import lodash from "lodash";
+import { verifyToken } from "../helpers/token.js";
 
-const _ = lodash
+// Verifies the JWT if present and attaches the payload to req.auth.
+// Does NOT block — route guards (authMiddleware) enforce access.
+export const customMiddleware = (req, res, next) => {
+    const header = req.header('Authorization') || '';
+    const token = header.startsWith('Bearer ') ? header.slice(7) : header;
 
-export const customMiddleware = (req, nes, next) => {
-    const token = req.header('Authorization');
-    const tokenParsed = checkToken(token)
-
-    req.global = {
-        tokenParsed
-    }
+    req.auth = token ? verifyToken(token) : null;
     next();
-}
-
-const checkToken = (token) => {
-    if (_.isUndefined(token)) {
-        return false;
-    }
-
-    return decodeToken(token);
-}
+};

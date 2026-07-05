@@ -7,7 +7,7 @@
 ## ✨ Features
 
 - Minimal setup required to get started.
-- Includes MongoDB support with Mongoose.
+- Pluggable database via a single `DB_ENGINE` switch: MongoDB (Mongoose) or SQL — PostgreSQL & MySQL (Knex), behind a clean repository pattern.
 - Authentication handling with JWT and bcrypt.
 - Middleware for security and CORS control.
 - Logging support with Winston.

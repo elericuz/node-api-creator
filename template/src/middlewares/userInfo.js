@@ -1,12 +1,6 @@
+// Derives the user id from the VERIFIED token (req.auth), never from a
+// client-supplied header. Runs after customMiddleware.
 export const userInfo = (req, res, next) => {
-    const xUserId = req.header('X-User-Id');
-
-    let uid = null;
-    if (xUserId) {
-        uid = xUserId
-    }
-
-    req.uid = uid;
-
+    req.uid = req.auth?.uid || null;
     next();
-}
+};

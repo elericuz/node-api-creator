@@ -7,15 +7,15 @@ This template provides a professional and modern starting point for creating a n
 - 🚀 **Professional Startup Banner**: Real-time system stats (RAM, Disk, Uptime) on boot.
 - 🛠️ **Environment Management**: Fully integrated with `.env` files.
 - 📊 **Modern Logging**: Winston logger with Luxon for precise localized timestamps.
-- 🔗 **Database Ready**: Mongoose integration with flexible connection logic (non-blocking in Dev).
+- 🔗 **Pluggable Database**: One `DB_ENGINE` switch — MongoDB (Mongoose) or SQL (Knex for PostgreSQL & MySQL) — behind a clean **repository pattern**, so your business logic never changes when you swap engines.
 - 🛡️ **Security**: Pre-configured with CORS, Rate Limiting, and JWT authentication.
-- 🧩 **Modular Structure**: Organized by modules (Controllers, Models, Routes, Services).
+- 🧩 **Modular Structure**: Organized by modules (Controllers, Services, Repositories, Models, Routes).
 
 ## Prerequisites
 
 Ensure you have the following installed:
 - [Node.js](https://nodejs.org/) (Latest LTS recommended)
-- [MongoDB](https://www.mongodb.com/)
+- A database matching your `DB_ENGINE`: [MongoDB](https://www.mongodb.com/), [PostgreSQL](https://www.postgresql.org/), or [MySQL](https://www.mysql.com/)
 
 ## Installation
 
@@ -34,6 +34,33 @@ Ensure you have the following installed:
    # .env is automatically created from .env.example
    nano .env
    ```
+
+## Choosing a Database Engine
+
+Pick the backend with a single `DB_ENGINE` variable in your `.env` — everything else stays the same:
+
+```dotenv
+DB_ENGINE=mongo            # mongo | postgres | mysql
+
+# When DB_ENGINE=mongo
+MONGO_USER=...
+MONGO_PASSWORD=...
+MONGO_SERVER=...
+MONGO_DB=...
+
+# When DB_ENGINE=postgres | mysql
+SQL_HOST=localhost
+SQL_PORT=5432              # 5432 for postgres, 3306 for mysql
+SQL_USER=...
+SQL_PASSWORD=...
+SQL_DATABASE=...
+SQL_SSL=false
+```
+
+Data access lives behind a **repository pattern** — see the reference `user` module. Each
+DB-backed module defines a domain contract plus one adapter per engine, and a factory
+resolves the right one at runtime from `DB_ENGINE`. Your services and controllers never
+import a database library directly; that is what keeps switching engines painless.
 
 ## Running the Project
 
@@ -55,13 +82,21 @@ The `package.json` includes the following modern stack:
 
 ### Key Dependencies:
 - `express` (v5+) - Fast, unopinionated, minimalist web framework.
-- `mongoose` (v9+) - Elegant MongoDB object modeling.
+- `mongoose` (v9+) - Elegant MongoDB object modeling (used when `DB_ENGINE=mongo`).
+- `knex` - SQL query builder powering the Postgres/MySQL engines.
+- `pg` / `mysql2` - PostgreSQL and MySQL drivers (used when `DB_ENGINE=postgres`/`mysql`).
 - `express-validator` - Set of express.js middlewares that wraps validator.js.
 - `jsonwebtoken` - JWT-based authentication.
 - `bcrypt` - Optimized password hashing.
 - `cors` - Cross-origin resource sharing.
 - `dotenv` - Zero-dependency environment variable loader.
 - `winston` - Universal logging library with daily rotation support.
+
+> ℹ️ **Note on the SQL drivers:** `pg` and `mysql2` ship as regular dependencies so **any**
+> engine works right after `npm install`, with no extra setup. They're loaded lazily — only
+> when `DB_ENGINE` actually selects them — so a MongoDB-only project pays zero runtime cost
+> for them. If you're sure you'll never use SQL, you can safely remove both (or move them to
+> `optionalDependencies`).
 
 ### Development Tools:
 - `nodemon` - Auto-restart server on file changes.
@@ -81,17 +116,21 @@ The `package.json` includes the following modern stack:
 .env
 package.json
 app.js
-db.js
 server.js
+db/               # Pluggable DB factory (engine chosen via DB_ENGINE)
+├── index.js      #   connect() / getClient() / disconnect()
+└── engines/      #   mongo.js (Mongoose), postgres.js & mysql.js (Knex)
 src/
 ├── helpers/      # Global utilities (logger, token, etc.)
 ├── middlewares/  # Express middlewares
 ├── modules/      # Business logic by module
-│   └── home/
+│   ├── home/     # Stateless reference module
+│   └── user/     # DB-backed reference module (repository pattern)
 │       ├── controllers/
-│       ├── models/
-│       ├── routes/
-│       └── services/
+│       ├── services/      # DB-agnostic business logic
+│       ├── repositories/  # port (contract) + mongo/ & sql/ adapters + factory
+│       ├── models/        # models/mongo/ (schema) · models/sql/ (table)
+│       └── routes/
 └── routes/       # Versioned route entry points
 ```
 

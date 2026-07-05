@@ -86,35 +86,41 @@ if (!process.env.DEFAULT_PORT) {
     process.exit(1);
 }
 
-const mongoParams = [
-    "MONGO_USER",
-    "MONGO_PASSWORD",
-    "MONGO_SERVER",
-    "MONGO_DB"
-];
+const DB_ENGINE = (process.env.DB_ENGINE || "mongo").toLowerCase();
 
-const missingParams = mongoParams.filter(param => !process.env[param]);
+const requiredParamsByEngine = {
+    mongo: ["MONGO_USER", "MONGO_PASSWORD", "MONGO_SERVER", "MONGO_DB"],
+    postgres: ["SQL_HOST", "SQL_USER", "SQL_DATABASE"],
+    mysql: ["SQL_HOST", "SQL_USER", "SQL_DATABASE"],
+};
+
+if (!requiredParamsByEngine[DB_ENGINE]) {
+    console.error(`\x1b[31m❌ [ERROR] Invalid DB_ENGINE "${DB_ENGINE}". Must be mongo, postgres or mysql.\x1b[0m`);
+    process.exit(1);
+}
+
+const missingParams = requiredParamsByEngine[DB_ENGINE].filter(param => !process.env[param]);
 
 const rl = readline.createInterface({
     input: process.stdin,
     output: process.stdout
 });
 
-let db;
-
 if (missingParams.length === 0) {
-    import("./db.js").then(module => {
-        db = module.default;
+    import("./db/index.js").then(async ({ connect }) => {
+        await connect();
         startServer();
     }).catch(err => {
-        console.error(`\x1b[31m❌ [DB] Error loading db.js:\x1b[0m`, err);
+        console.error(`\x1b[31m❌ [DB] Error connecting (${DB_ENGINE}):\x1b[0m`, err.message);
+        process.exit(1);
     });
 } else {
     if (process.env.ENVIRONMENT === "DEVELOPMENT") {
+        console.warn(`\x1b[33m⚠️  [CONFIG] Missing ${DB_ENGINE} config: ${missingParams.join(', ')} — starting without database.\x1b[0m`);
         rl.close();
         startServer();
     } else {
-        console.warn(`\x1b[33m⚠️  [CONFIG] Missing MongoDB: ${missingParams.join(', ')}\x1b[0m`);
+        console.warn(`\x1b[33m⚠️  [CONFIG] Missing ${DB_ENGINE} config: ${missingParams.join(', ')}\x1b[0m`);
         console.warn(`\x1b[31m⛔ [SYSTEM] Mode: PRODUCTION - Missing critical database configuration.\x1b[0m`);
         rl.question("Do you want to continue? (yes/no) [no]: ", answer => {
             if (answer.toLowerCase() === "yes") {
@@ -148,8 +154,11 @@ function startServer() {
 
             process.on("SIGINT", async () => {
                 console.log(`\n\x1b[33m🔌 [SYSTEM] Closing server...\x1b[0m`);
-                if (db) {
-                    await db.close();
+                try {
+                    const { disconnect } = await import("./db/index.js");
+                    await disconnect();
+                } catch (e) {
+                    console.error(`\x1b[31m❌ [DB] Error during disconnect:\x1b[0m`, e.message);
                 }
                 process.exit(0);
             });
